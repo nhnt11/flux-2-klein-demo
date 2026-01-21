@@ -1,5 +1,5 @@
 ---
-// No server-side logic needed for this page
+import ImageGenerator from '../components/ImageGenerator';
 ---
 
 <html lang="en">
@@ -7,7 +7,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>FLUX.2 [klein] Demo</title>
-  <style>
+  <style is:global>
     * {
       box-sizing: border-box;
       margin: 0;
@@ -254,7 +254,7 @@
       position: relative;
     }
 
-    #promptInput {
+    .prompt-container input {
       width: 100%;
       padding: 1rem 1.25rem;
       font-size: 1.125rem;
@@ -265,11 +265,11 @@
       transition: all 0.2s;
     }
 
-    #promptInput::placeholder {
+    .prompt-container input::placeholder {
       color: #a3a3a3;
     }
 
-    #promptInput:focus {
+    .prompt-container input:focus {
       outline: none;
       border-color: #a3a3a3;
       box-shadow: 0 0 0 3px rgba(163, 163, 163, 0.1);
@@ -373,302 +373,13 @@
         font-size: 0.875rem;
       }
 
-      #promptInput {
+      .prompt-container input {
         font-size: 1rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="main-content">
-      <header class="header">
-        <h1>FLUX.2 <span class="klein">[klein]</span></h1>
-        <p class="tagline">Ultra-fast image generation by <a href="https://blackforestlabs.ai" target="_blank">Black Forest Labs</a></p>
-      </header>
-
-      <div class="settings-row">
-        <div class="api-key-container">
-          <input type="text" id="apiKey" placeholder="Enter your BFL API key">
-          <p class="api-key-hint">Don't have a key? <a href="https://dashboard.bfl.ai/get-started" target="_blank">Get started here</a></p>
-        </div>
-        <div class="model-select">
-          <label for="modelVariant">Model variant:</label>
-          <select id="modelVariant">
-            <option value="9b">9B</option>
-            <option value="4b">4B</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="image-container" id="imageContainer">
-        <div class="drop-overlay" id="dropOverlay">Drop image here</div>
-        <div class="loading-overlay" id="loadingOverlay">
-          <div class="spinner" id="imageSpinner"></div>
-          <svg class="check-icon" id="checkIcon" width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <path d="M4 12.5L9 17.5L20 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <img id="previousImage" class="generated-image previous" alt="">
-        <img id="currentImage" class="generated-image current" alt="">
-        <div class="placeholder" id="placeholder">
-          <p>Enter a prompt below to generate an image</p>
-          <p class="hint">Or drag & drop a reference image</p>
-        </div>
-      </div>
-
-      <div class="edit-mode-toggle disabled" id="editModeContainer">
-        <div class="toggle-switch disabled" id="editModeToggle"></div>
-        <span class="toggle-label">Edit mode</span>
-        <span class="toggle-description">— Use the current image as a reference for the next generation</span>
-      </div>
-
-      <div class="prompt-container">
-        <input
-          type="text"
-          id="promptInput"
-          placeholder="Describe an image..."
-          autocomplete="off"
-        >
-        <span class="gen-time" id="genTime"></span>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const apiKeyInput = document.getElementById('apiKey');
-    const imageContainer = document.getElementById('imageContainer');
-    const dropOverlay = document.getElementById('dropOverlay');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const previousImage = document.getElementById('previousImage');
-    const currentImage = document.getElementById('currentImage');
-    const placeholder = document.getElementById('placeholder');
-    const promptInput = document.getElementById('promptInput');
-    const genTime = document.getElementById('genTime');
-    const modelVariant = document.getElementById('modelVariant');
-    const editModeToggle = document.getElementById('editModeToggle');
-    const editModeContainer = document.getElementById('editModeContainer');
-
-    let isGenerating = false;
-    let referenceImageBase64 = null;
-    let editMode = false;
-
-    function enableEditModeToggle() {
-      editModeToggle.classList.remove('disabled');
-      editModeContainer.classList.remove('disabled');
-    }
-
-    editModeToggle.addEventListener('click', () => {
-      if (editModeToggle.classList.contains('disabled')) return;
-      editMode = !editMode;
-      editModeToggle.classList.toggle('active', editMode);
-    });
-
-    function loadApiKey() {
-      const savedKey = localStorage.getItem('bfl_api_key');
-      if (savedKey) {
-        apiKeyInput.value = savedKey;
-      }
-    }
-
-    apiKeyInput.addEventListener('change', () => {
-      localStorage.setItem('bfl_api_key', apiKeyInput.value);
-    });
-
-    async function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const base64 = reader.result.split(',')[1];
-          resolve(base64);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function generateImage(prompt) {
-      const apiKey = apiKeyInput.value;
-
-      if (!apiKey) {
-        alert('Please enter your BFL API key');
-        apiKeyInput.focus();
-        return null;
-      }
-
-      const body = {
-        prompt,
-        apiKey,
-        variant: modelVariant.value,
-      };
-
-      // Send current image as reference only if edit mode is on
-      if (editMode && currentImage.src) {
-        if (currentImage.src.startsWith('blob:')) {
-          body.image = referenceImageBase64;
-        } else {
-          body.imageUrl = currentImage.src;
-        }
-      }
-
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch {
-        throw new Error(`Request failed (${response.status})`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data.error || `Request failed (${response.status})`);
-      }
-
-      return data.url;
-    }
-
-    async function handleGenerate() {
-      const prompt = promptInput.value.trim();
-      if (!prompt || isGenerating) return;
-
-      isGenerating = true;
-      const startTime = Date.now();
-
-      // Show loading state and start timer immediately
-      loadingOverlay.classList.add('visible');
-      genTime.textContent = '0.0s';
-      const timerInterval = setInterval(() => {
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        genTime.textContent = `${elapsed}s`;
-      }, 100);
-
-      try {
-        const imageUrl = await generateImage(prompt);
-
-        // Show checkmark while image loads
-        loadingOverlay.classList.add('complete');
-
-        if (imageUrl) {
-          // Wait for image to load before showing
-          await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = imageUrl;
-          });
-
-          // Stop timer and show final time
-          clearInterval(timerInterval);
-          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          genTime.textContent = `${elapsed}s`;
-
-          if (currentImage.src) {
-            previousImage.src = currentImage.src;
-            currentImage.classList.remove('show');
-          }
-
-          currentImage.src = imageUrl;
-          placeholder.classList.add('hidden');
-
-          // Clear loading overlay before starting crossfade
-          loadingOverlay.classList.remove('visible');
-          loadingOverlay.classList.remove('complete');
-
-          // Enable edit mode toggle now that we have an image
-          enableEditModeToggle();
-
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              currentImage.classList.add('show');
-            });
-          });
-        }
-      } catch (error) {
-        clearInterval(timerInterval);
-        genTime.textContent = '';
-        console.error('Generation failed:', error);
-        alert(error.message);
-        loadingOverlay.classList.remove('visible');
-        loadingOverlay.classList.remove('complete');
-      } finally {
-        isGenerating = false;
-      }
-    }
-
-    promptInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleGenerate();
-      }
-    });
-
-    // Prevent browser from opening dropped files
-    document.addEventListener('dragover', (e) => e.preventDefault());
-    document.addEventListener('drop', (e) => e.preventDefault());
-
-    let dragCounter = 0;
-
-    imageContainer.addEventListener('dragenter', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter++;
-      dropOverlay.classList.add('visible');
-      imageContainer.classList.add('drag-over');
-    });
-
-    imageContainer.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-
-    imageContainer.addEventListener('dragleave', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter--;
-      if (dragCounter === 0) {
-        dropOverlay.classList.remove('visible');
-        imageContainer.classList.remove('drag-over');
-      }
-    });
-
-    imageContainer.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter = 0;
-      dropOverlay.classList.remove('visible');
-      imageContainer.classList.remove('drag-over');
-
-      const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
-        referenceImageBase64 = await fileToBase64(file);
-        const url = URL.createObjectURL(file);
-
-        if (currentImage.src) {
-          previousImage.src = currentImage.src;
-          currentImage.classList.remove('show');
-        }
-
-        currentImage.src = url;
-        placeholder.classList.add('hidden');
-
-        // Enable toggle and auto-enable edit mode
-        enableEditModeToggle();
-        editMode = true;
-        editModeToggle.classList.add('active');
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            currentImage.classList.add('show');
-          });
-        });
-      }
-    });
-
-    loadApiKey();
-  </script>
+  <ImageGenerator client:load />
 </body>
 </html>
