@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>FLUX.2 [klein] Demo</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="main-content">
+        <header class="header">
+          <h1>FLUX.2 <span class="klein">[klein]</span></h1>
+          <p class="tagline">Ultra-fast image generation by <a href="https://blackforestlabs.ai" target="_blank">Black Forest Labs</a></p>
+        </header>
+
+        <div class="settings-row">
+          <div class="api-key-container">
+            <input type="text" id="apiKey" placeholder="Enter your BFL API key" />
+            <p class="api-key-hint">Don't have a key? <a href="https://dashboard.bfl.ai/get-started" target="_blank">Get started here</a></p>
+          </div>
+          <div class="model-select">
+            <label for="modelVariant">Model variant:</label>
+            <select id="modelVariant">
+              <option value="9b">9B</option>
+              <option value="4b">4B</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="image-container" id="imageContainer">
+          <div class="drop-overlay" id="dropOverlay">Drop image here</div>
+          <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner" id="imageSpinner"></div>
+            <svg class="check-icon" id="checkIcon" width="48" height="48" viewBox="0 0 24 24" fill="none">
+              <path d="M4 12.5L9 17.5L20 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <img id="previousImage" class="generated-image previous" alt="" />
+          <img id="currentImage" class="generated-image current" alt="" />
+          <div class="placeholder" id="placeholder">
+            <p>Enter a prompt below to generate an image</p>
+            <p class="hint">Or drag & drop a reference image</p>
+          </div>
+        </div>
+
+        <div class="edit-mode-toggle disabled" id="editModeContainer">
+          <div class="toggle-switch disabled" id="editModeToggle"></div>
+          <span class="toggle-label">Edit mode</span>
+          <span class="toggle-description">— Use the current image as a reference for the next generation</span>
+        </div>
+
+        <div class="prompt-container">
+          <input
+            type="text"
+            id="promptInput"
+            placeholder="Describe an image..."
+            autocomplete="off"
+          />
+          <span class="gen-time" id="genTime"></span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

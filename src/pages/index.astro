@@ -1,0 +1,674 @@
+---
+// No server-side logic needed for this page
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FLUX.2 [klein] Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #fafafa;
+      min-height: 100vh;
+      color: #171717;
+    }
+
+    .container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .main-content {
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .header {
+      text-align: left;
+      margin-bottom: 0.5rem;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #171717;
+    }
+
+    .header .klein {
+      font-weight: 400;
+      color: #737373;
+    }
+
+    .header .tagline {
+      font-size: 1rem;
+      color: #737373;
+      margin-top: 0.25rem;
+    }
+
+    .header .tagline a {
+      color: #525252;
+      text-decoration: none;
+    }
+
+    .header .tagline a:hover {
+      text-decoration: underline;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.5rem;
+    }
+
+    .api-key-container {
+      text-align: left;
+      flex: 1;
+    }
+
+    .model-select {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-top: 0.25rem;
+    }
+
+    .model-select label {
+      font-size: 0.875rem;
+      color: #525252;
+      white-space: nowrap;
+    }
+
+    .model-select select {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      background: white;
+      cursor: pointer;
+    }
+
+    .model-select select:focus {
+      outline: none;
+      border-color: #a3a3a3;
+    }
+
+    .api-key-container input {
+      width: 100%;
+      max-width: 320px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      background: white;
+    }
+
+    .api-key-container input:focus {
+      outline: none;
+      border-color: #a3a3a3;
+    }
+
+    .api-key-hint {
+      font-size: 0.8125rem;
+      color: #737373;
+      margin-top: 0.5rem;
+    }
+
+    .api-key-hint a {
+      color: #525252;
+      text-decoration: none;
+    }
+
+    .api-key-hint a:hover {
+      text-decoration: underline;
+    }
+
+    .image-container {
+      position: relative;
+      aspect-ratio: 1;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+
+    .image-container.drag-over {
+      box-shadow: inset 0 0 0 4px #a3a3a3;
+    }
+
+    .placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #a3a3a3;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .placeholder p {
+      font-size: 1rem;
+    }
+
+    .placeholder .hint {
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+      opacity: 0.7;
+    }
+
+    .placeholder.hidden {
+      display: none;
+    }
+
+    .generated-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .generated-image.previous {
+      z-index: 1;
+    }
+
+    .generated-image.current {
+      z-index: 2;
+      opacity: 0;
+    }
+
+    .generated-image.current.show {
+      opacity: 1;
+    }
+
+    .drop-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.125rem;
+      color: #525252;
+    }
+
+    .drop-overlay.visible {
+      display: flex;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-overlay.visible {
+      display: flex;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 2px solid #d4d4d4;
+      border-top-color: #404040;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .spinner.small {
+      width: 20px;
+      height: 20px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .prompt-container {
+      position: relative;
+    }
+
+    #promptInput {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      font-size: 1.125rem;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      background: white;
+      color: #171717;
+      transition: all 0.2s;
+    }
+
+    #promptInput::placeholder {
+      color: #a3a3a3;
+    }
+
+    #promptInput:focus {
+      outline: none;
+      border-color: #a3a3a3;
+      box-shadow: 0 0 0 3px rgba(163, 163, 163, 0.1);
+    }
+
+    .gen-time {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.875rem;
+      color: #a3a3a3;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .loading-overlay .spinner {
+      display: block;
+    }
+
+    .loading-overlay .check-icon {
+      display: none;
+      color: #22c55e;
+    }
+
+    .loading-overlay.complete .spinner {
+      display: none;
+    }
+
+    .loading-overlay.complete .check-icon {
+      display: block;
+    }
+
+    .edit-mode-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: -0.5rem;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: #e5e5e5;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle-switch.active {
+      background: #171717;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(16px);
+    }
+
+    .toggle-switch.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .edit-mode-toggle.disabled .toggle-label,
+    .edit-mode-toggle.disabled .toggle-description {
+      opacity: 0.4;
+    }
+
+    .toggle-label {
+      font-size: 0.875rem;
+      color: #525252;
+    }
+
+    .toggle-description {
+      font-size: 0.75rem;
+      color: #a3a3a3;
+      margin-left: 0.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 1rem;
+      }
+
+      .header h1 {
+        font-size: 1.75rem;
+      }
+
+      .header .tagline {
+        font-size: 0.875rem;
+      }
+
+      #promptInput {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-content">
+      <header class="header">
+        <h1>FLUX.2 <span class="klein">[klein]</span></h1>
+        <p class="tagline">Ultra-fast image generation by <a href="https://blackforestlabs.ai" target="_blank">Black Forest Labs</a></p>
+      </header>
+
+      <div class="settings-row">
+        <div class="api-key-container">
+          <input type="text" id="apiKey" placeholder="Enter your BFL API key">
+          <p class="api-key-hint">Don't have a key? <a href="https://dashboard.bfl.ai/get-started" target="_blank">Get started here</a></p>
+        </div>
+        <div class="model-select">
+          <label for="modelVariant">Model variant:</label>
+          <select id="modelVariant">
+            <option value="9b">9B</option>
+            <option value="4b">4B</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="image-container" id="imageContainer">
+        <div class="drop-overlay" id="dropOverlay">Drop image here</div>
+        <div class="loading-overlay" id="loadingOverlay">
+          <div class="spinner" id="imageSpinner"></div>
+          <svg class="check-icon" id="checkIcon" width="48" height="48" viewBox="0 0 24 24" fill="none">
+            <path d="M4 12.5L9 17.5L20 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <img id="previousImage" class="generated-image previous" alt="">
+        <img id="currentImage" class="generated-image current" alt="">
+        <div class="placeholder" id="placeholder">
+          <p>Enter a prompt below to generate an image</p>
+          <p class="hint">Or drag & drop a reference image</p>
+        </div>
+      </div>
+
+      <div class="edit-mode-toggle disabled" id="editModeContainer">
+        <div class="toggle-switch disabled" id="editModeToggle"></div>
+        <span class="toggle-label">Edit mode</span>
+        <span class="toggle-description">— Use the current image as a reference for the next generation</span>
+      </div>
+
+      <div class="prompt-container">
+        <input
+          type="text"
+          id="promptInput"
+          placeholder="Describe an image..."
+          autocomplete="off"
+        >
+        <span class="gen-time" id="genTime"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiKeyInput = document.getElementById('apiKey');
+    const imageContainer = document.getElementById('imageContainer');
+    const dropOverlay = document.getElementById('dropOverlay');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const previousImage = document.getElementById('previousImage');
+    const currentImage = document.getElementById('currentImage');
+    const placeholder = document.getElementById('placeholder');
+    const promptInput = document.getElementById('promptInput');
+    const genTime = document.getElementById('genTime');
+    const modelVariant = document.getElementById('modelVariant');
+    const editModeToggle = document.getElementById('editModeToggle');
+    const editModeContainer = document.getElementById('editModeContainer');
+
+    let isGenerating = false;
+    let referenceImageBase64 = null;
+    let editMode = false;
+
+    function enableEditModeToggle() {
+      editModeToggle.classList.remove('disabled');
+      editModeContainer.classList.remove('disabled');
+    }
+
+    editModeToggle.addEventListener('click', () => {
+      if (editModeToggle.classList.contains('disabled')) return;
+      editMode = !editMode;
+      editModeToggle.classList.toggle('active', editMode);
+    });
+
+    function loadApiKey() {
+      const savedKey = localStorage.getItem('bfl_api_key');
+      if (savedKey) {
+        apiKeyInput.value = savedKey;
+      }
+    }
+
+    apiKeyInput.addEventListener('change', () => {
+      localStorage.setItem('bfl_api_key', apiKeyInput.value);
+    });
+
+    async function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function generateImage(prompt) {
+      const apiKey = apiKeyInput.value;
+
+      if (!apiKey) {
+        alert('Please enter your BFL API key');
+        apiKeyInput.focus();
+        return null;
+      }
+
+      const body = {
+        prompt,
+        apiKey,
+        variant: modelVariant.value,
+      };
+
+      // Send current image as reference only if edit mode is on
+      if (editMode && currentImage.src) {
+        if (currentImage.src.startsWith('blob:')) {
+          body.image = referenceImageBase64;
+        } else {
+          body.imageUrl = currentImage.src;
+        }
+      }
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error(`Request failed (${response.status})`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error || `Request failed (${response.status})`);
+      }
+
+      return data.url;
+    }
+
+    async function handleGenerate() {
+      const prompt = promptInput.value.trim();
+      if (!prompt || isGenerating) return;
+
+      isGenerating = true;
+      const startTime = Date.now();
+
+      // Show loading state and start timer immediately
+      loadingOverlay.classList.add('visible');
+      genTime.textContent = '0.0s';
+      const timerInterval = setInterval(() => {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        genTime.textContent = `${elapsed}s`;
+      }, 100);
+
+      try {
+        const imageUrl = await generateImage(prompt);
+
+        // Show checkmark while image loads
+        loadingOverlay.classList.add('complete');
+
+        if (imageUrl) {
+          // Wait for image to load before showing
+          await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imageUrl;
+          });
+
+          // Stop timer and show final time
+          clearInterval(timerInterval);
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+          genTime.textContent = `${elapsed}s`;
+
+          if (currentImage.src) {
+            previousImage.src = currentImage.src;
+            currentImage.classList.remove('show');
+          }
+
+          currentImage.src = imageUrl;
+          placeholder.classList.add('hidden');
+
+          // Clear loading overlay before starting crossfade
+          loadingOverlay.classList.remove('visible');
+          loadingOverlay.classList.remove('complete');
+
+          // Enable edit mode toggle now that we have an image
+          enableEditModeToggle();
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              currentImage.classList.add('show');
+            });
+          });
+        }
+      } catch (error) {
+        clearInterval(timerInterval);
+        genTime.textContent = '';
+        console.error('Generation failed:', error);
+        alert(error.message);
+        loadingOverlay.classList.remove('visible');
+        loadingOverlay.classList.remove('complete');
+      } finally {
+        isGenerating = false;
+      }
+    }
+
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleGenerate();
+      }
+    });
+
+    // Prevent browser from opening dropped files
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => e.preventDefault());
+
+    let dragCounter = 0;
+
+    imageContainer.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter++;
+      dropOverlay.classList.add('visible');
+      imageContainer.classList.add('drag-over');
+    });
+
+    imageContainer.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    imageContainer.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter--;
+      if (dragCounter === 0) {
+        dropOverlay.classList.remove('visible');
+        imageContainer.classList.remove('drag-over');
+      }
+    });
+
+    imageContainer.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter = 0;
+      dropOverlay.classList.remove('visible');
+      imageContainer.classList.remove('drag-over');
+
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        referenceImageBase64 = await fileToBase64(file);
+        const url = URL.createObjectURL(file);
+
+        if (currentImage.src) {
+          previousImage.src = currentImage.src;
+          currentImage.classList.remove('show');
+        }
+
+        currentImage.src = url;
+        placeholder.classList.add('hidden');
+
+        // Enable toggle and auto-enable edit mode
+        enableEditModeToggle();
+        editMode = true;
+        editModeToggle.classList.add('active');
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            currentImage.classList.add('show');
+          });
+        });
+      }
+    });
+
+    loadApiKey();
+  </script>
+</body>
+</html>
