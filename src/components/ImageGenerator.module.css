@@ -25,8 +25,14 @@
 }
 
 .header {
-  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 0.5rem;
+}
+
+.headerLeft {
+  text-align: left;
 }
 
 .header h1 {
@@ -39,6 +45,17 @@
 .klein {
   font-weight: 400;
   color: #737373;
+}
+
+.githubLink {
+  color: #525252;
+  transition: color 0.2s;
+  padding: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+.githubLink:hover {
+  color: #171717;
 }
 
 .tagline {
